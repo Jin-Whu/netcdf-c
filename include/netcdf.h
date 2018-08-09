@@ -154,9 +154,14 @@ Use this in mode flags for both nc_create() and nc_open(). */
 Use this in mode flags for both nc_create() and nc_open(). */
 #define NC_MPIPOSIX      0x4000 /**< \deprecated As of libhdf5 1.8.13. */
 
-#define NC_INMEMORY      0x8000  /**< Read from memory. Mode flag for nc_open() or nc_create(). */
+#define NC_INMEMORY      0x8000  /**< Read from memory. Mode flag for nc_open() or nc_create() => NC_DISKLESS */
 
 #define NC_PNETCDF       (NC_MPIIO) /**< Use parallel-netcdf library; alias for NC_MPIIO. */
+
+#define NC_UDF0          0x0080  /**< User-defined format 0. */
+#define NC_UDF1          0x0002  /**< User-defined format 1. */
+
+#define NC_MAX_MAGIC_NUMBER_LEN 8 /**< Max len of ser-defined format magic number. */
 
 /** Format specifier for nc_set_default_format() and returned
  *  by nc_inq_format. This returns the format as provided by
@@ -207,6 +212,8 @@ Use this in mode flags for both nc_create() and nc_open(). */
 #define NC_FORMATX_PNETCDF   (4)
 #define NC_FORMATX_DAP2      (5)
 #define NC_FORMATX_DAP4      (6)
+#define NC_FORMATX_UDF0      (8)
+#define NC_FORMATX_UDF1      (9)
 #define NC_FORMATX_UNDEFINED (0)
 
   /* To avoid breaking compatibility (such as in the python library),
@@ -419,6 +426,7 @@ by the desired type. */
 #define NC_ENOTFOUND     (-90)      /**< No such file */
 #define NC_ECANTREMOVE   (-91)      /**< Can't remove file */
 #define NC_EINTERNAL     (-92)      /**< NetCDF Library Internal Error */
+#define NC_EPNETCDF      (-93)      /**< Error at PnetCDF layer */
 
 /* The following was added in support of netcdf-4. Make all netcdf-4
    error codes < -100 so that errors can be added to netcdf-3 if
@@ -459,7 +467,8 @@ by the desired type. */
 #define NC_EFILTER       (-132)    /**< Filter operation failed. */
 #define NC_ERCFILE       (-133)    /**< RC file failure */
 #define NC_ENULLPAD      (-134)    /**< Header Bytes not Null-Byte padded */
-#define NC4_LAST_ERROR   (-135)    /**< @internal All netCDF errors > this. */
+#define NC_EINMEMORY     (-135)    /**< In-memory file error */
+#define NC4_LAST_ERROR   (-136)    /**< @internal All netCDF errors > this. */
 
 /** @internal This is used in netCDF-4 files for dimensions without
  * coordinate vars. */
@@ -502,6 +511,14 @@ nc_inq_libvers(void);
 
 EXTERNL const char *
 nc_strerror(int ncerr);
+
+/* Set up user-defined format. */
+typedef struct NC_Dispatch NC_Dispatch;
+EXTERNL int
+nc_def_user_format(int mode_flag, NC_Dispatch *dispatch_table, char *magic_number);
+
+EXTERNL int
+nc_inq_user_format(int mode_flag, NC_Dispatch **dispatch_table, char *magic_number);
 
 EXTERNL int
 nc__create(const char *path, int cmode, size_t initialsz,
@@ -1725,8 +1742,6 @@ EXTERNL int
 nc_get_var_ubyte(int ncid, int varid, unsigned char *ip);
 /* End Deprecated */
 
-#ifdef LOGGING
-
 /* Set the log level. 0 shows only errors, 1 only major messages,
  * etc., to 5, which shows way too much information. */
 EXTERNL int
@@ -1735,12 +1750,6 @@ nc_set_log_level(int new_level);
 /* Use this to turn off logging by calling
    nc_log_level(NC_TURN_OFF_LOGGING) */
 #define NC_TURN_OFF_LOGGING (-1)
-
-#else /* not LOGGING */
-
-#define nc_set_log_level(e) /**< Get rid of these calls. */
-
-#endif /* LOGGING */
 
 /* Show the netCDF library's in-memory metadata for a file. */
 EXTERNL int
@@ -1790,11 +1799,6 @@ EXTERNL int
 nctypelen(nc_type datatype);
 
 /* Begin v2.4 backward compatibility */
-/*
- * defining NO_NETCDF_2 to the preprocessor
- * turns off backward compatibility declarations.
- */
-#ifndef NO_NETCDF_2
 
 /** Backward compatible alias. */
 /**@{*/
@@ -1957,18 +1961,18 @@ ncrecget(int ncid, long recnum, void **datap);
 EXTERNL int
 ncrecput(int ncid, long recnum, void *const *datap);
 
-EXTERNL int nc_finalize();
-
-/* End v2.4 backward compatibility */
-#endif /*!NO_NETCDF_2*/
+EXTERNL int nc_finalize(void);
 
 #if defined(__cplusplus)
 }
 #endif
 
 /* Define two hard-coded functionality-related
-   macros, but this is not going to be
-   standard practice. */
+   (as requested by community developers) macros.
+   This is not going to be standard practice.
+   Don't remove without an in-place replacement of some sort,
+   the are now (for better or worse) used by downstream
+   software external to Unidata. */
 #ifndef NC_HAVE_RENAME_GRP
 #define NC_HAVE_RENAME_GRP /*!< rename_grp() support. */
 #endif

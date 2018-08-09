@@ -341,7 +341,7 @@ makeocpathstring(OClink conn, OCddsnode node, const char* sep)
     NCbytes* pathname = NULL;
 
     /* If we are asking for the dataset path only,
-       then nclude it, otherwise elide it
+       then include it, otherwise elide it
     */
     oc_dds_type(conn,node,&octype);
     if(octype == OC_Dataset) {
@@ -567,7 +567,8 @@ getlimitnumber(const char* limit)
     case 'K': case 'k': multiplier = KILOBYTE; break;
     default: break;
     }
-    sscanf(limit,"%lu",&lu);
+    if(sscanf(limit,"%lu",&lu) != 1)
+	return 0;
     return (lu*multiplier);
 }
 

@@ -7,7 +7,7 @@
    for consistency.  Leaves the file around afterwards.
 
    Based on a program to test the nasa look-alike program, so not the
-   most appropropriate test. See ../nctest for a complete spec test.
+   most appropriate test. See ../nctest for a complete spec test.
 */
 
 #define REDEF
@@ -361,7 +361,7 @@ main(int argc, char *argv[])
 	MPI_Init(&argc, &argv);
 
     cmode |= (NC_PNETCDF);
-#ifdef USE_CDF5
+#ifdef ENABLE_CDF5
 	cmode |= (NC_64BIT_DATA);
 #endif
 	ret = nc_create_par(fname,cmode, MPI_COMM_WORLD, MPI_INFO_NULL, &id);

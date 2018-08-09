@@ -199,7 +199,7 @@ OPTION(NC_FIND_SHARED_LIBS "Find dynamically-built versions of dependent librari
 
 ##
 # We've had a request to allow for non-versioned shared libraries.
-# This seems reasonable enough to accomodate.  See
+# This seems reasonable enough to accommodate.  See
 # https://github.com/Unidata/netcdf-c/issues/228 for more info.
 ##
 OPTION(ENABLE_SHARED_LIBRARY_VERSION "Encode the library SO version in the file name of the generated library file." ON)
@@ -382,20 +382,6 @@ OPTION(ENABLE_MMAP "Use MMAP." ON)
 # Option to use examples.
 OPTION(ENABLE_EXAMPLES "Build Examples" ON)
 
-# Option to use Diskless
-OPTION(ENABLE_DISKLESS "Build Diskless." ON)
-IF(ENABLE_DISKLESS)
-  SET(BUILD_DISKLESS ON)
-  SET(USE_DISKLESS ON)
-ENDIF()
-
-# Option Logging, only valid for netcdf4.
-OPTION(ENABLE_LOGGING "Enable Logging." OFF)
-IF(ENABLE_LOGGING)
-  ADD_DEFINITIONS(-DLOGGING)
-  SET(LOGGING ON)
-ENDIF()
-
 # Option to automatically build netcdf-fortran.
 IF(NOT MSVC)
   OPTION(ENABLE_REMOTE_FORTRAN_BOOTSTRAP "Download and build netcdf-fortran automatically (EXPERIMENTAL)." OFF)
@@ -534,6 +520,20 @@ ELSE()
   SET(ENABLE_HDF4 OFF)
 ENDIF()
 
+# Option Logging, only valid for netcdf4.
+OPTION(ENABLE_LOGGING "Enable Logging." OFF)
+IF(ENABLE_LOGGING)
+  ADD_DEFINITIONS(-DLOGGING)
+  ADD_DEFINITIONS(-DENABLE_SET_LOG_LEVEL)
+  SET(LOGGING ON)
+  SET(ENABLE_SET_LOG_LEVEL ON)
+ENDIF()
+OPTION(ENABLE_SET_LOG_LEVEL_FUNC "Enable definition of nc_set_log_level()." ON)
+IF(ENABLE_NETCDF_4 AND NOT ENABLE_LOGGING AND ENABLE_SET_LOG_LEVEL_FUNC)
+  ADD_DEFINITIONS(-DENABLE_SET_LOG_LEVEL)
+  SET(ENABLE_SET_LOG_LEVEL ON)
+ENDIF()
+
 # Option to allow for strict null file padding.
 # See https://github.com/Unidata/netcdf-c/issues/657 for more information
 OPTION(ENABLE_STRICT_NULL_BYTE_HEADER_PADDING "Enable strict null byte header padding." OFF)
@@ -589,7 +589,7 @@ IF(USE_HDF5 OR ENABLE_NETCDF_4)
     # as a shared library, we will use hdf5 as a shared
     # library. If we are building netcdf statically,
     # we will use a static library.  This can be toggled
-    # by explicitely modifying NC_FIND_SHARED_LIBS.
+    # by explicitly modifying NC_FIND_SHARED_LIBS.
     ##
     IF(NC_FIND_SHARED_LIBS)
       SET(NC_HDF5_LINK_TYPE "shared")
@@ -687,6 +687,8 @@ IF(USE_HDF5 OR ENABLE_NETCDF_4)
     ENDIF()
   ENDIF(HDF5_C_LIBRARY AND HDF5_HL_LIBRARY AND HDF5_INCLUDE_DIR)
 
+  FIND_PACKAGE(Threads)
+
   # There is a missing case in the above code so default it
   IF(NOT HDF5_C_LIBRARY_HDF5 OR "${HDF5_C_LIBRARY_hdf5}" STREQUAL "" )
     SET(HDF5_C_LIBRARY_hdf5 "${HDF5_C_LIBRARY}")
@@ -760,12 +762,6 @@ IF(USE_HDF5 OR ENABLE_NETCDF_4)
 
 ENDIF(USE_HDF5 OR ENABLE_NETCDF_4)
 
-# Option to turn on CDF5 support.
-OPTION(ENABLE_CDF5 "Enable CDF5 Support." ON)
-IF(ENABLE_CDF5)
-    SET(USE_CDF5 ON CACHE BOOL "")
-ENDIF(ENABLE_CDF5)
-
 # Option to Build DAP2+DAP4 Clients
 OPTION(ENABLE_DAP "Enable DAP2 and DAP4 Client." ON)
 IF(ENABLE_DAP)
@@ -835,7 +831,7 @@ ENDIF()
 # Option to Enable DAP long tests, remote tests.
 OPTION(ENABLE_DAP_LONG_TESTS "Enable DAP long tests." OFF)
 OPTION(ENABLE_DAP_REMOTE_TESTS "Enable DAP remote tests." ON)
-SET(REMOTETESTSERVERS "remotetest.unidata.ucar.edu,jetstream.unidata.ucar.edu" CACHE STRING "test servers to use for remote test")
+SET(REMOTETESTSERVERS "149.165.169.123:8080,remotetest.unidata.ucar.edu" CACHE STRING "test servers to use for remote test")
 
 # If netCDF4 and DAP, Option for DAP groups.
 IF(ENABLE_NETCDF_4 AND ENABLE_DAP2)
@@ -942,6 +938,11 @@ IF(ENABLE_LARGE_FILE_TESTS)
   SET(LARGE_FILE_TESTS ON)
 ENDIF()
 
+OPTION(ENABLE_METADATA_PERF_TESTS "Enable test of metadata performance." OFF)
+IF(ENABLE_METADATA_PERF_TESTS)
+  SET(ENABLE_METADATA_PERF ON)
+ENDIF()
+
 # Location for large file tests.
 SET(TEMP_LARGE "." CACHE STRING "Location to store large file tests.")
 
@@ -1031,7 +1032,7 @@ IF(ENABLE_PNETCDF)
   ENDIF(NOT PNETCDF)
 ENDIF()
 
-# Options to enable use of fill values for elements casuing NC_ERANGE
+# Options to enable use of fill values for elements causing NC_ERANGE
 SET(STATUS_ERANGE_FILL "OFF")
 OPTION(ENABLE_ERANGE_FILL "Enable use of fill value when out-of-range type conversion causes NC_ERANGE error." OF)
 IF(ENABLE_ERANGE_FILL)
@@ -1173,6 +1174,10 @@ IF(ENABLE_DOXYGEN)
   ENDIF(NC_DOT)
 ENDIF()
 
+# Always enable DISKLESS
+OPTION(ENABLE_DISKLESS "Enable in-memory files" ON)
+
+
 # By default, MSVC has a stack size of 1000000.
 # Allow a user to override this.
 IF(MSVC)
@@ -1282,6 +1287,26 @@ CHECK_TYPE_SIZE("_Bool"     SIZEOF__BOOL)
 
 CHECK_TYPE_SIZE("size_t"    SIZEOF_SIZE_T)
 
+# Check whether to turn on or off CDF5 support.
+SET(ENABLE_CDF5 AUTO CACHE STRING "AUTO")
+OPTION(ENABLE_CDF5 "Enable CDF5 support" ON)
+IF(SIZEOF_SIZE_T EQUAL 4)
+   IF(ENABLE_CDF5) # enable or auto
+      STRING(TOUPPER ${ENABLE_CDF5} ENABLE_CDF5)
+      IF(ENABLE_CDF5 AND NOT ENABLE_CDF5 STREQUAL "AUTO") # explicitly enabled
+         MESSAGE(FATAL_ERROR "Unable to support CDF5 feature because size_t is less than 8 bytes")
+      ENDIF(ENABLE_CDF5 AND NOT ENABLE_CDF5 STREQUAL "AUTO")
+      SET(ENABLE_CDF5 OFF) # cannot support CDF5
+      SET(USE_CDF5 OFF CACHE BOOL "") # cannot support CDF5
+   ENDIF(ENABLE_CDF5)
+ELSE(SIZEOF_SIZE_T EQUAL 4)
+   IF(ENABLE_CDF5) # explicitly set by user or not set
+      SET(USE_CDF5 ON CACHE BOOL "")
+   ELSE(ENABLE_CDF5) # explicitly disabled by user
+      SET(USE_CDF5 OFF CACHE BOOL "")
+   ENDIF(ENABLE_CDF5)
+ENDIF(SIZEOF_SIZE_T EQUAL 4)
+
 CHECK_TYPE_SIZE("ssize_t"   SIZEOF_SSIZE_T)
 IF(SIZEOF_SSIZE_T)
   SET(HAVE_SSIZE_T TRUE)
@@ -1362,9 +1387,12 @@ MACRO(ADD_EXTRA_DIST files)
 ENDMACRO()
 
 # A basic script used to convert m4 files
-FIND_PROGRAM(NC_M4 NAMES m4)
+FIND_PROGRAM(NC_M4 NAMES m4 m4.exe)
 IF(NC_M4)
-    SET(HAVE_M4 TRUE)
+  MESSAGE(STATUS "Found m4: ${NC_M4}")
+  SET(HAVE_M4 TRUE)
+ELSE()
+  MESSAGE(STATUS "m4 not found.")
 ENDIF()
 
 MACRO(GEN_m4 filename)
@@ -1553,12 +1581,24 @@ ENDMACRO()
 # Determine if 'bash' is on the system.
 ##
 
-FIND_PROGRAM(HAVE_BASH NAMES bash)
-IF(HAVE_BASH)
-  MESSAGE(STATUS "Found bash: ${HAVE_BASH}")
-ELSE()
-  MESSAGE(STATUS "Bash shell not found; disabling shell script tests.")
-ENDIF()
+OPTION(ENABLE_BASH_SCRIPT_TESTING "Detection is typically automatic, but this option can be used to force enable/disable bash-script based tests." ON)
+
+IF(ENABLE_BASH_SCRIPT_TESTING)
+  FIND_PROGRAM(HAVE_BASH bash)
+  IF(HAVE_BASH)
+    STRING(COMPARE EQUAL "${HAVE_BASH}" "C:/Windows/System32/bash.exe" IS_BASH_EXE)
+    IF(NOT IS_BASH_EXE)
+      MESSAGE(STATUS "Found bash: ${HAVE_BASH}")
+    ELSE()
+      MESSAGE(STATUS "Ignoring ${HAVE_BASH}")
+      SET(HAVE_BASH "")
+    ENDIF()
+  ELSE()
+    MESSAGE(STATUS "Bash shell not found; disabling shell script tests.")
+  ENDIF()
+ELSE(ENABLE_BASH_SCRIPT_TESTING)
+  SET(HAVE_BASH "")
+ENDIF(ENABLE_BASH_SCRIPT_TESTING)
 
 MACRO(add_sh_test prefix F)
   IF(HAVE_BASH)
@@ -1633,6 +1673,7 @@ ENDIF(USE_PNETCDF)
 
 IF(USE_HDF5)
   add_subdirectory(libsrc4)
+  add_subdirectory(libhdf5)
 ENDIF(USE_HDF5)
 
 IF(USE_HDF4)
@@ -1701,7 +1742,7 @@ ENDIF()
 ADD_SUBDIRECTORY(docs)
 
 ##
-# Brute force, grab all of the dlls from the depency directory,
+# Brute force, grab all of the dlls from the dependency directory,
 # install them in the binary dir. Grab all of the .libs, put them
 # in the libdir.
 ##
@@ -1773,7 +1814,11 @@ configure_file(
   ${netCDF_SOURCE_DIR}/netcdf.pc.in
   ${netCDF_BINARY_DIR}/netcdf.pc @ONLY)
 
-FILE(MAKE_DIRECTORY ${netCDF_BINARY_DIR}/tmp)
+
+IF(NOT IS_DIRECTORY ${netCDF_BINARY_DIR}/tmp)
+  FILE(MAKE_DIRECTORY ${netCDF_BINARY_DIR}/tmp)
+ENDIF()
+
 configure_file("${netCDF_SOURCE_DIR}/nc-config.cmake.in"
   "${netCDF_BINARY_DIR}/tmp/nc-config" @ONLY
   NEWLINE_STYLE LF)
@@ -1840,7 +1885,7 @@ is_enabled(ENABLE_PARALLEL4 HAS_PARALLEL4)
 is_enabled(ENABLE_DAP HAS_DAP)
 is_enabled(ENABLE_DAP HAS_DAP2)
 is_enabled(ENABLE_DAP4 HAS_DAP4)
-is_enabled(USE_DISKLESS HAS_DISKLESS)
+is_enabled(ENABLE_DISKLESS HAS_DISKLESS)
 is_enabled(USE_MMAP HAS_MMAP)
 is_enabled(JNA HAS_JNA)
 is_enabled(STATUS_RELAX_COORD_BOUND RELAX_COORD_BOUND)

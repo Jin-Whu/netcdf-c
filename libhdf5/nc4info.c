@@ -6,12 +6,9 @@
  * and redistribution conditions.
  * @author Dennis Heimbigner
  */
+
 #include "config.h"
-#include <stdlib.h>
-#include <string.h>
-#include <hdf5.h>
-#include "netcdf.h"
-#include "nc4internal.h"
+#include "hdf5internal.h"
 
 #define HDF5_MAX_NAME 1024 /**< HDF5 max name. */
 
@@ -120,7 +117,7 @@ done:
  * @author Dennis Heimbigner
  */
 static int
-NC4_get_propattr(NC_HDF5_FILE_INFO_T* h5)
+NC4_get_propattr(NC_FILE_INFO_T* h5)
 {
     int ncstat = NC_NOERR;
     size_t size;
@@ -172,7 +169,7 @@ done:
  * @author Dennis Heimbigner
  */
 int
-NC4_put_propattr(NC_HDF5_FILE_INFO_T* h5)
+NC4_put_propattr(NC_FILE_INFO_T* h5)
 {
     int ncstat = NC_NOERR;
     hid_t grp = -1;
@@ -219,7 +216,7 @@ NC4_put_propattr(NC_HDF5_FILE_INFO_T* h5)
  * @author Dennis Heimbigner
  */
 int
-NC4_get_fileinfo(NC_HDF5_FILE_INFO_T* h5, struct NCPROPINFO* init)
+NC4_get_fileinfo(NC_FILE_INFO_T* h5, struct NCPROPINFO* init)
 {
     int ncstat = NC_NOERR;
 
